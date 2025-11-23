@@ -2,6 +2,9 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
+<meta name="description" content="Alat untuk membuat bookmarklet pengisi kode OTP otomatis dan mendekode kode QR Google Authenticator untuk mengekstrak secret key.">
+<meta name="keywords" content="bookmarklet, kode otp, generator, google authenticator, 2fa, dapodik, siasn, infogtk, sdm">
+<meta name="author" content="danie-lung">
 <title>Bookmarklet Kode OTP</title>
 <style>
     body {font-family: monospace, sans-serif;background: #f4f6f8;color: #333;padding: 20px;}p {font-family: monospace}h1 {color: #2c3e50;font-size: 24px;}.container {background: white;padding: 20px;border-radius: 10px;max-width: 40em;margin: auto;box-shadow: 0 4px 10px rgba(0,0,0,0.1);}input[type="file"], input[type="text"] {margin-top: 10px;padding: 8px;font-family: monospace;border: 1px solid #ccc;border-radius: 6px;background: #f9f9f9;width: 100%;box-sizing: border-box;}#output {background: #1e1e1e;color: #00ff88;padding: 15px;border-radius: 6px;margin-top: 20px;font-family: monospace;white-space: pre-wrap;max-height: 400px;overflow-y: auto;}button {margin-top: 15px;padding: 8px 12px;background: #3498db;color: white;border: none;border-radius: 6px;cursor: pointer;font-family: monospace;}button:hover {background: #2980b9;}.radio-group {display: flex;gap: 15px;margin: 10px 0;}.radio-group label {display: flex;align-items: center;gap: 5px;cursor: pointer;transition: 0.2s;}.radio-group input[type="radio"] {accent-color: #007bff;transform: scale(1.2);}.footer {margin-top: 2rem;text-align: center;font-size: 0.875rem;color: #6b7280;}.footer a {color: #3b82f6;font-weight: 600;text-decoration: none;}.footer a:hover {text-decoration: underline;}
@@ -25,6 +28,7 @@
 		<label><input type="radio" name="bmOption" value="totp_code"> SDM</label>
 		<label><input type="radio" name="bmOption" value="infogtk"> InfoGTK</label>
 		<label><input type="radio" name="bmOption" value="otp"> SIASN</label>
+		<label><input type="radio" name="bmOption" value="totp"> Google</label>
 	</div>
     <button onclick="generateBookmarklet()">Generate Bookmarklet</button>
     <p style="margin: 24px 0;font-family: monospace, sans-serif">Bookmarklet: <a id="bookmarkletLink" href="#" target="_blank"></a></p>
@@ -41,6 +45,7 @@
 <script src="https://cdn.jsdelivr.net/npm/protobufjs/dist/protobuf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 <script>
+// Menambahkan event listener ke input file yang akan memanggil fungsi handleFile saat file dipilih.
 document.getElementById('fileInput').addEventListener('change', handleFile);
 
 function handleFile(evt) {
@@ -49,6 +54,7 @@ function handleFile(evt) {
 
     const reader = new FileReader();
     reader.onload = function(e) {
+        // Membuat elemen gambar untuk memuat file yang dipilih.
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
@@ -58,6 +64,7 @@ function handleFile(evt) {
             ctx.drawImage(img, 0, 0);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height);
+            // Jika QR code berhasil dipindai, proses datanya.
 
             if (code) {
                 processQR(code.data);
@@ -70,14 +77,17 @@ function handleFile(evt) {
     reader.readAsDataURL(file);
 }
 
+// Fungsi untuk memproses data dari QR code yang telah dipindai.
 function processQR(qrText) {
     try {
+        // Cek jika QR code adalah format standar otpauth:// (satu akun).
         if (qrText.startsWith("otpauth://")) {
             const url = new URL(qrText);
             const secret = url.searchParams.get("secret");
             const issuer = url.searchParams.get("issuer") || "(tidak ada)";
             const label = decodeURIComponent(url.pathname.replace(/^\/\//, ''));
             if (secret) {
+                // Menampilkan informasi akun tunggal.
                 document.getElementById('output').textContent =
                     `📌 OTP Auth\n` +
                     `Nama   : ${label}\n` +
@@ -88,6 +98,7 @@ function processQR(qrText) {
             }
             return;
         }
+        // Jika bukan, diasumsikan format migrasi Google Authenticator (banyak akun).
         const url = new URL(qrText);
         let dataParam = url.searchParams.get("data");
 
@@ -96,15 +107,18 @@ function processQR(qrText) {
             return;
         }
 
+        // Membersihkan dan mendekode data dari parameter URL.
         dataParam = dataParam.replace(/ /g, '+').replace(/%20/g, '+').replace(/%2B/gi, '+');
 
+        // Mengubah data base64 menjadi byte array.
         const binary = atob(dataParam);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) {
             bytes[i] = binary.charCodeAt(i);
         }
 
-        const root = protobuf.Root.fromJSON({
+        // Mendefinisikan struktur data protobuf untuk payload migrasi Google Authenticator.
+		const root = protobuf.Root.fromJSON({
             nested: {
                 MigrationPayload: {
                     fields: {
@@ -129,6 +143,7 @@ function processQR(qrText) {
             }
         });
 
+        // Mendekode byte array menggunakan definisi protobuf.
         const MigrationPayload = root.lookupType("MigrationPayload");
         const payload = MigrationPayload.decode(bytes);
 
@@ -137,6 +152,7 @@ function processQR(qrText) {
             return;
         }
 
+        // Memproses dan menampilkan setiap akun yang ditemukan dalam payload.
         let result = "";
         payload.otpParameters.forEach((param, i) => {
             const secretBase32 = base32Encode(param.secret);
@@ -152,6 +168,7 @@ function processQR(qrText) {
     }
 }
 
+// Fungsi untuk mengonversi byte array menjadi string Base32.
 function base32Encode(bytes) {
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     let bits = 0, value = 0, output = '';
@@ -169,11 +186,79 @@ function base32Encode(bytes) {
     return output;
 }
 
+// Fungsi untuk menghasilkan kode bookmarklet.
 function generateBookmarklet() {
+    // Mengambil nilai dari input pengguna.
     const code = document.getElementById("bookmarkletCode").value.trim();
 	const namacode = document.getElementById("bookmarkletNama").value.trim();
 	const selected2fa = document.querySelector('input[name="bmOption"]:checked').value;
-	let jsCode = `var secretKey="${code}";var jadiKey="";function base32Decode(e){for(var t=e.toUpperCase().replace(/=+$/,"").replace(/\s+/g,""),r=0,n=0,a=[],o=0;o<t.length;o++){var c="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(t[o]);if(-1===c)throw new Error("Invalid Base32 character: "+t[o]);n=n<<5|c,(r+=5)>=8&&(a.push(n>>>r-8&255),r-=8)}return new Uint8Array(a)}function intToBuffer(e){var t=new ArrayBuffer(8),r=new DataView(t),n=Math.floor(e/Math.pow(2,32)),a=e>>>0;return r.setUint32(0,n),r.setUint32(4,a),new Uint8Array(t)}function generateTOTP(e,t,r,n){t=t||6,r=r||30,n=n||"SHA-1";var a=base32Decode(e),o=Math.floor(Date.now()/1e3),c=intToBuffer(Math.floor(o/r));return crypto.subtle.importKey("raw",a,{name:"HMAC",hash:{name:n}},!1,["sign"]).then(function(e){return crypto.subtle.sign("HMAC",e,c)}).then(function(e){var r=new Uint8Array(e),n=15&r[r.length-1];return(((127&r[n])<<24|(255&r[n+1])<<16|(255&r[n+2])<<8|255&r[n+3])%Math.pow(10,t)).toString().padStart(t,"0")})}generateTOTP(secretKey).then(function(e){jadiKey=e;var jotp="${selected2fa}";if("infogtk"==jotp){const e=document.querySelectorAll("#otpForm .otp-input");jadiKey.split("").forEach((t,o)=>{e[o]&&(e[o].value=t)})}else document.getElementById("${selected2fa}").value=e;}).catch(function(e){alert("Error: id tidak ditemukan untuk OTP " + jadiKey)});`;
+    // Template kode JavaScript yang akan dijalankan oleh bookmarklet.
+	let jsCode = `
+        var secretKey = "${code}";
+        var jadiKey = "";
+
+        function base32Decode(base32) {
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            var base32Upper = base32.toUpperCase().replace(/=+$/, "").replace(/\\s+/g, "");
+            var bits = 0;
+            var value = 0;
+            var output = [];
+            for (var i = 0; i < base32Upper.length; i++) {
+                var charIndex = alphabet.indexOf(base32Upper[i]);
+                if (charIndex === -1) throw new Error("Invalid Base32 character: " + base32Upper[i]);
+                value = (value << 5) | charIndex;
+                bits += 5;
+                if (bits >= 8) {
+                    output.push((value >>> (bits - 8)) & 255);
+                    bits -= 8;
+                }
+            }
+            return new Uint8Array(output);
+        }
+
+        function intToBuffer(num) {
+            var buffer = new ArrayBuffer(8);
+            var view = new DataView(buffer);
+            var high = Math.floor(num / Math.pow(2, 32));
+            var low = num >>> 0;
+            view.setUint32(0, high);
+            view.setUint32(4, low);
+            return new Uint8Array(buffer);
+        }
+
+        function generateTOTP(secret, digits, period, algo) {
+            digits = digits || 6;
+            period = period || 30;
+            algo = algo || "SHA-1";
+            var key = base32Decode(secret);
+            var time = Math.floor(Date.now() / 1000);
+            var timeStep = intToBuffer(Math.floor(time / period));
+            return crypto.subtle.importKey("raw", key, { name: "HMAC", hash: { name: algo } }, false, ["sign"])
+                .then(function(cryptoKey) { return crypto.subtle.sign("HMAC", cryptoKey, timeStep); })
+                .then(function(hash) {
+                    var hmacResult = new Uint8Array(hash);
+                    var offset = hmacResult[hmacResult.length - 1] & 15;
+                    var truncatedHash = ((hmacResult[offset] & 127) << 24) | ((hmacResult[offset + 1] & 255) << 16) | ((hmacResult[offset + 2] & 255) << 8) | (hmacResult[offset + 3] & 255);
+                    return (truncatedHash % Math.pow(10, digits)).toString().padStart(digits, "0");
+                });
+        }
+
+        generateTOTP(secretKey).then(function(otp) {
+            jadiKey = otp;
+            var jotp = "${selected2fa}";
+            if (jotp === "infogtk") {
+                const inputs = document.querySelectorAll("#otpForm .otp-input");
+                jadiKey.split("").forEach((char, index) => {
+                    if (inputs[index]) inputs[index].value = char;
+                });
+            } else {
+                document.getElementById(jotp).value = otp;
+            }
+        }).catch(function(err) {
+            alert("Error: id tidak ditemukan untuk OTP " + jadiKey);
+        });
+    `;
+    // Validasi input.
     if (!code) {
 		alert("Masukkan kode secret terlebih dahulu.");
         return;
@@ -181,6 +266,7 @@ function generateBookmarklet() {
 		alert("Masukkan nama bookmark terlebih dahulu.");
 		return;
 	}
+    // Membuat URL bookmarklet dan menampilkannya di halaman.
     const bookmarklet = "javascript:(function(){" + encodeURIComponent(jsCode) + "})();";
     const link = document.getElementById("bookmarkletLink");
     link.href = bookmarklet;
@@ -189,7 +275,3 @@ function generateBookmarklet() {
 </script>
 </body>
 </html>
-
-
-
-
