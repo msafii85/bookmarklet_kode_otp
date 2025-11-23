@@ -6,8 +6,16 @@
 <meta name="keywords" content="bookmarklet, kode otp, generator, google authenticator, 2fa, dapodik, siasn, infogtk, sdm">
 <meta name="author" content="danie-lung">
 <title>Bookmarklet Kode OTP</title>
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2b50.png" sizes="72x72" type="image/png">
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/16x16/2b50.png" sizes="16x16" type="image/png">
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/180x180/2b50.png">
 <style>
-    body {font-family: monospace, sans-serif;background: #f4f6f8;color: #333;padding: 20px;}p {font-family: monospace}h1 {color: #2c3e50;font-size: 24px;}.container {background: white;padding: 20px;border-radius: 10px;max-width: 40em;margin: auto;box-shadow: 0 4px 10px rgba(0,0,0,0.1);}input[type="file"], input[type="text"] {margin-top: 10px;padding: 8px;font-family: monospace;border: 1px solid #ccc;border-radius: 6px;background: #f9f9f9;width: 100%;box-sizing: border-box;}#output {background: #1e1e1e;color: #00ff88;padding: 15px;border-radius: 6px;margin-top: 20px;font-family: monospace;white-space: pre-wrap;max-height: 400px;overflow-y: auto;}button {margin-top: 15px;padding: 8px 12px;background: #3498db;color: white;border: none;border-radius: 6px;cursor: pointer;font-family: monospace;}button:hover {background: #2980b9;}.radio-group {display: flex;gap: 15px;margin: 10px 0;}.radio-group label {display: flex;align-items: center;gap: 5px;cursor: pointer;transition: 0.2s;}.radio-group input[type="radio"] {accent-color: #007bff;transform: scale(1.2);}.footer {margin-top: 2rem;text-align: center;font-size: 0.875rem;color: #6b7280;}.footer a {color: #3b82f6;font-weight: 600;text-decoration: none;}.footer a:hover {text-decoration: underline;}
+    body {font-family: monospace, sans-serif;background: #f4f6f8;color: #333;padding: 20px;}p {font-family: monospace}h1 {color: #2c3e50;font-size: 24px;}.container {background: white;padding: 20px;border-radius: 10px;max-width: 40em;margin: auto;box-shadow: 0 4px 10px rgba(0,0,0,0.1);}input[type="file"], input[type="text"] {margin-top: 10px;padding: 8px;font-family: monospace;border: 1px solid #ccc;border-radius: 6px;background: #f9f9f9;width: 100%;box-sizing: border-box;}#output {background: #1e1e1e;color: #00ff88;padding: 15px;border-radius: 6px;margin-top: 20px;font-family: monospace;white-space: pre-wrap;max-height: 400px;overflow-y: auto;}button {margin-top: 15px;padding: 8px 12px;background: #3498db;color: white;border: none;border-radius: 6px;cursor: pointer;font-family: monospace;}button:hover {background: #2980b9;}
+.radio-group {display: flex;gap: 12px;margin: 10px 0;flex-wrap: wrap;align-items: center;}
+.radio-group p {font-family: monospace, sans-serif;margin:0;flex-basis: 100%;}
+.radio-group label {display: flex;align-items: center;gap: 6px;cursor: pointer;transition: 0.15s;white-space: nowrap;padding: 4px 6px;border-radius: 6px;}
+.radio-group input[type="radio"] {accent-color: #007bff;transform: scale(1.15);}
+.footer {margin-top: 2rem;text-align: center;font-size: 0.875rem;color: #6b7280;}.footer a {color: #3b82f6;font-weight: 600;text-decoration: none;}.footer a:hover {text-decoration: underline;}
 </style>
 </head>
 <body>
