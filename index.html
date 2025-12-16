@@ -263,9 +263,11 @@ async function generateBookmarklet() {
                     if (inputs[index]) inputs[index].value = char;
                 });
             } else if (jotp === "_token") {
-                document.querySelector("input[name='two_factor_auth_code']").value = otp;
+                document.querySelector("input[name='two_factor_auth_code']").value = otp;           
             } else {
-                document.getElementById(jotp).value = otp;
+                var el = document.getElementById(jotp);
+                if (!el) el = document.querySelector("input[name='" + jotp + "']");
+                el.value = otp;
             }
         }).catch(function(err) {
             alert("Error: id tidak ditemukan untuk OTP " + jadiKey);
