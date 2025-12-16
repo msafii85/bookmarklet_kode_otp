@@ -54,6 +54,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/protobufjs/dist/protobuf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/terser/dist/bundle.min.js"></script>
 <script>
 // Menambahkan event listener ke input file yang akan memanggil fungsi handleFile saat file dipilih.
 document.getElementById('fileInput').addEventListener('change', handleFile);
@@ -197,7 +198,7 @@ function base32Encode(bytes) {
 }
 
 // Fungsi untuk menghasilkan kode bookmarklet.
-function generateBookmarklet() {
+async function generateBookmarklet() {
     // Mengambil nilai dari input pengguna.
     const code = document.getElementById("bookmarkletCode").value.trim();
 	const namacode = document.getElementById("bookmarkletNama").value.trim();
@@ -261,6 +262,8 @@ function generateBookmarklet() {
                 jadiKey.split("").forEach((char, index) => {
                     if (inputs[index]) inputs[index].value = char;
                 });
+            } else if (jotp === "_token") {
+                document.querySelector("input[name='two_factor_auth_code']").value = otp;
             } else {
                 document.getElementById(jotp).value = otp;
             }
@@ -276,11 +279,25 @@ function generateBookmarklet() {
 		alert("Masukkan nama bookmark terlebih dahulu.");
 		return;
 	}
-    // Membuat URL bookmarklet dan menampilkannya di halaman.
-    const bookmarklet = "javascript:(function(){" + encodeURIComponent(jsCode) + "})();";
-    const link = document.getElementById("bookmarkletLink");
-    link.href = bookmarklet;
-    link.textContent = document.getElementById("bookmarkletNama").value;
+
+    // Minify jsCode menggunakan Terser
+    try {
+        if (typeof Terser === 'undefined') {
+            throw new Error("Library Terser belum dimuat. Periksa koneksi internet Anda.");
+        }
+        
+        const result = await Terser.minify(jsCode, {
+            mangle: { toplevel: true }, // Mengubah nama variabel agar lebih pendek
+            compress: { drop_console: true, passes: 2 } // Kompresi ekstra
+        });
+        // Membuat URL bookmarklet dan menampilkannya di halaman.
+        const bookmarklet = "javascript:(function(){" + encodeURIComponent(result.code) + "})();";
+        const link = document.getElementById("bookmarkletLink");
+        link.href = bookmarklet;
+        link.textContent = document.getElementById("bookmarkletNama").value;
+    } catch (err) {
+        alert("Gagal meminifikasi kode: " + err.message);
+    }
 }
 </script>
 </body>
