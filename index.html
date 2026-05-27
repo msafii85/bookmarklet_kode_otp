@@ -332,7 +332,7 @@ async function generateBookmarklet() {
                     if (hostingerInput) {
                         hostingerInput.value = otp;
                     } else {
-                        alert("Input OTP Hostinger tidak ditemukan");
+                        alert("Error: id tidak ditemukan untuk OTP " + jadiKey);
                     }
 
                     return;
@@ -347,13 +347,13 @@ async function generateBookmarklet() {
                 if (el) {
                     el.value = otp;
                 } else {
-                    alert("Input OTP tidak ditemukan");
+                    alert("Error: id tidak ditemukan untuk OTP " + jadiKey);
                 }
             }
 
         })
         .catch(function(err){
-            alert("Error OTP: " + err.message);
+            alert("Error: id tidak ditemukan untuk OTP " + jadiKey);
         });
 
     },0);
