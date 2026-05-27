@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -65,6 +66,12 @@ button:hover {
 
 <h1>⭐ Bookmarklet Kode OTP</h1>
 
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+<p style="margin:0;">Tutorial: <a style="text-decoration:none" href="https://youtu.be/29o-ych59Os" target="_blank">▶️ Youtube - @danie_lung</a></p>
+<p style="margin:0;">Ajak Ngopi: <a style="text-decoration:none" href="https://s.id/danielung" target="_blank">☕️ Tubruk</a></p>
+</div>
+<hr>
+
 <input type="text" id="bookmarkletCode" placeholder="Masukkan Kode Secret">
 <input type="text" id="bookmarkletNama" placeholder="Masukkan Nama Bookmarklet">
 
@@ -83,11 +90,96 @@ Bookmarklet:
 <a id="bookmarkletLink" href="#"></a>
 </p>
 
+<hr>
+
+<h3 style="margin-bottom:5px">👉 Google Authenticator QR Decoder</h3>
+
+<p style="margin-top:0">
+Unggah gambar kode QR 2FA untuk mengekstrak akun dan secret-nya.
+Atau Anda bisa langsung menggunakan Generator Bookmarklet di atas jika sudah memiliki kode secret.
+</p>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<pre id="output" style="background:#1e1e1e;color:#00ff88;padding:15px;border-radius:6px;margin-top:20px;white-space:pre-wrap;max-height:400px;overflow-y:auto;">Silakan Upload QR Google Authenticator</pre>
+
+<div style="margin-top:2rem;text-align:center;font-size:0.875rem;color:#6b7280;">
+📂 Lihat kode sumber di
+<a href="https://github.com/msafii85/bookmarklet_kode_otp" target="_blank" style="color:#3b82f6;font-weight:600;text-decoration:none;">GitHub</a>
 </div>
 
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/protobufjs/dist/protobuf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/terser/dist/bundle.min.js"></script>
 
 <script>
+
+// =========================
+// QR DECODER
+// =========================
+
+document.getElementById('fileInput').addEventListener('change', handleFile);
+
+function handleFile(evt) {
+    const file = evt.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const img = new Image();
+
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+                processQR(code.data);
+            } else {
+                document.getElementById('output').textContent = '❌ QR code tidak terbaca.';
+            }
+        };
+
+        img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function processQR(qrText) {
+    try {
+        if (qrText.startsWith('otpauth://')) {
+            const url = new URL(qrText);
+            const secret = url.searchParams.get('secret');
+            const issuer = url.searchParams.get('issuer') || '(tidak ada)';
+            const label = decodeURIComponent(url.pathname.replace(/^\/\//, ''));
+
+            document.getElementById('output').textContent =
+                `📌 OTP Auth
+Nama   : ${label}
+Issuer : ${issuer}
+Secret : ${secret}`;
+
+            return;
+        }
+    } catch(err) {
+        document.getElementById('output').textContent = '❌ Error: ' + err.message;
+    }
+}
+
+// =========================
+// BOOKMARKLET GENERATOR
+// =========================
+
 async function generateBookmarklet() {
 
     const code = document.getElementById("bookmarkletCode").value.trim();
