@@ -136,54 +136,109 @@ function handleFile(evt) {
     if (!file) return;
 
     const reader = new FileReader();
-
     reader.onload = function(e) {
         const img = new Image();
-
         img.onload = function() {
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
-
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
-
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height);
 
             if (code) {
                 processQR(code.data);
             } else {
-                document.getElementById('output').textContent = '❌ QR code tidak terbaca.';
+                document.getElementById('output').textContent = "❌ QR code tidak terbaca.";
             }
         };
-
         img.src = e.target.result;
     };
-
     reader.readAsDataURL(file);
 }
 
 function processQR(qrText) {
     try {
-        if (qrText.startsWith('otpauth://')) {
+        if (qrText.startsWith("otpauth://")) {
             const url = new URL(qrText);
-            const secret = url.searchParams.get('secret');
-            const issuer = url.searchParams.get('issuer') || '(tidak ada)';
+            const secret = url.searchParams.get("secret");
+            const issuer = url.searchParams.get("issuer") || "(tidak ada)";
             const label = decodeURIComponent(url.pathname.replace(/^\/\//, ''));
-
-            document.getElementById('output').textContent =
-                `📌 OTP Auth
-Nama   : ${label}
-Issuer : ${issuer}
-Secret : ${secret}`;
-
+            if (secret) {
+                document.getElementById('output').textContent =
+                    `📌 OTP Auth\n` +
+                    `Nama   : ${label}\n` +
+                    `Issuer : ${issuer}\n` +
+                    `Secret : ${secret}`;
+            } else {
+                document.getElementById('output').textContent = "⚠️ Secret tidak ditemukan di QR.";
+            }
             return;
         }
-    } catch(err) {
-        document.getElementById('output').textContent = '❌ Error: ' + err.message;
+        const url = new URL(qrText);
+        let dataParam = url.searchParams.get("data");
+
+        if (!dataParam) {
+            document.getElementById('output').textContent = "⚠️ Parameter data= tidak ditemukan.";
+            return;
+        }
+
+        dataParam = dataParam.replace(/ /g, '+').replace(/%20/g, '+').replace(/%2B/gi, '+');
+
+        const binary = atob(dataParam);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        const root = protobuf.Root.fromJSON({
+            nested: {
+                MigrationPayload: {
+                    fields: {
+                        otpParameters: { rule: "repeated", type: "OtpParameters", id: 1 },
+                        version: { type: "int32", id: 2 },
+                        batchSize: { type: "int32", id: 3 },
+                        batchIndex: { type: "int32", id: 4 },
+                        batchId: { type: "bytes", id: 5 }
+                    }
+                },
+                OtpParameters: {
+                    fields: {
+                        secret: { type: "bytes", id: 1 },
+                        name: { type: "string", id: 2 },
+                        issuer: { type: "string", id: 3 },
+                        algorithm: { type: "int32", id: 4 },
+                        digits: { type: "int32", id: 5 },
+                        type: { type: "int32", id: 6 },
+                        counter: { type: "int64", id: 7 }
+                    }
+                }
+            }
+        });
+
+        const MigrationPayload = root.lookupType("MigrationPayload");
+        const payload = MigrationPayload.decode(bytes);
+
+        if (!payload.otpParameters || payload.otpParameters.length === 0) {
+            document.getElementById('output').textContent = "⚠️ Tidak ada akun ditemukan di payload migrasi.";
+            return;
+        }
+
+        let result = "";
+        payload.otpParameters.forEach((param, i) => {
+            const secretBase32 = base32Encode(param.secret);
+            result += `📌 Akun ${i+1}\n`;
+            result += `Nama   : ${param.name}\n`;
+            result += `Issuer : ${param.issuer}\n`;
+            result += `Secret : ${secretBase32}\n\n`;
+        });
+
+        document.getElementById('output').textContent = result;
+    } catch (err) {
+        document.getElementById('output').textContent = "❌ Error: " + err.message;
     }
-}
+
 
 // =========================
 // BOOKMARKLET GENERATOR
